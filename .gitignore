@@ -163,4 +163,3 @@ ppo_tensorboard/
 
 src/train_sb3.py
 
-*.pt
