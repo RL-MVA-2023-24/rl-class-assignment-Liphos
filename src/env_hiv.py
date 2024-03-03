@@ -223,6 +223,16 @@ class HIVPatient(gym.Env):
             + self.R2 * action[1] ** 2
             - self.S * state[5]
         )
+        # print(
+        #    "Virus reward: ",
+        #    -self.Q * state[4],
+        #    "R1 reward: ",
+        #    -self.R1 * action[0] ** 2,
+        #    "R2 reward: ",
+        #    -self.R2 * action[1] ** 2,
+        #    "Immune response reward: ",
+        #    self.S * state[5],
+        # )
         return rew
 
     def step(self, a_index):
@@ -242,5 +252,4 @@ class HIVPatient(gym.Env):
 
         if self.logscale:
             state2 = np.log10(state2)
-
         return state2, rew, False, False, {}
