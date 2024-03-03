@@ -1,4 +1,5 @@
 from gymnasium.wrappers import TimeLimit
+
 from env_hiv import HIVPatient
 
 env = TimeLimit(
@@ -13,6 +14,17 @@ env = TimeLimit(
 class ProjectAgent:
     def act(self, observation, use_random=False):
         return 0
+
+    def save(self, path):
+        pass
+
+    def load(self):
+        pass
+
+
+class RandomAgent:
+    def act(self, observation, use_random=True):
+        return env.action_space.sample()
 
     def save(self, path):
         pass
