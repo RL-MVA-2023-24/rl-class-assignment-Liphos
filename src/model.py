@@ -205,5 +205,7 @@ class DQN(ProjectAgent):
         torch.save(self.model.state_dict(), path)
 
     def load(self):
-        self.model.load_state_dict(torch.load("./model.pt"))
+        self.model.load_state_dict(
+            torch.load("./model.pt", map_location=torch.device("cpu"))
+        )
         self.model.eval()
