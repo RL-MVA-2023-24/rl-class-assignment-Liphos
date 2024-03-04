@@ -62,30 +62,55 @@ class AlwaysPrescribe(ProjectAgent):
         return 3
 
 
-dqn_architecture = torch.nn.Sequential(
-    nn.Linear(env.observation_space.shape[0], 128),
-    nn.ReLU(),
-    nn.Linear(128, 128),
-    nn.ReLU(),
-    nn.Linear(128, env.action_space.n),
-)
+class DuelingDQN(torch.nn.Module):
+    def __init__(self, input_shape, n_actions):
+        super(DuelingDQN, self).__init__()
+
+        self.common = nn.Sequential(
+            nn.Linear(input_shape, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+        )
+
+        self.fc_val = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+        )
+
+        self.fc_adv = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, n_actions),
+        )
+
+    def forward(self, x):
+        x = self.common(x)
+        val = self.fc_val(x)
+        adv = self.fc_adv(x)
+        return val + adv - adv.mean(axis=-1, keepdim=True)
+
+
 dqn_config = {
     "buffer_size": 1e7,
-    "batch_size": 100,
+    "batch_size": 64,
     "gamma": 0.9,
     "epsilon_max": 1.0,
     "epsilon_min": 0.01,
-    "epsilon_decay_period": 20000,
+    "epsilon_decay_period": 20_000,
     "epsilon_delay_decay": 1000,
     "learning_rate": 0.001,
-    "gradient_steps": 5,
-    "update_target_freq": 100,
+    "gradient_steps": 3,
+    "update_target_freq": 200,
 }
 
 
+
 class DQN(ProjectAgent):
-    def __init__(self, config=dqn_config, model=dqn_architecture):
+    def __init__(self, config=dqn_config):
         # Init config
+        print("config: ", config)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.gamma = config["gamma"] if "gamma" in config.keys() else 0.95
         self.batch_size = config["batch_size"] if "batch_size" in config.keys() else 100
@@ -110,7 +135,9 @@ class DQN(ProjectAgent):
             else 1000
         )
         self.epsilon_step = (self.epsilon_max - self.epsilon_min) / self.epsilon_stop
-        self.model = model.to(self.device)
+        self.model = DuelingDQN(env.observation_space.shape[0], env.action_space.n).to(
+            self.device
+        )
         self.target_model = deepcopy(self.model).to(self.device)
         self.criterion = (
             config["criterion"] if "criterion" in config.keys() else torch.nn.MSELoss()
@@ -189,14 +216,15 @@ class DQN(ProjectAgent):
         if use_random and np.random.rand() < self.epsilon:
             action = env.action_space.sample()
         else:
-            Q = self.model(
-                torch.tensor(
-                    observation, device=self.device, dtype=torch.float32
-                ).unsqueeze(0)
-            )
-            action = torch.argmax(Q).item()
-            # if self.step > 2000:
-            #    print("Q: ", Q)
+            with torch.no_grad():
+                Q = self.model(
+                    torch.tensor(
+                        observation, device=self.device, dtype=torch.float32
+                    ).unsqueeze(0)
+                )
+                action = torch.argmax(Q).item()
+                # if self.step > 2000:
+                #    print("Q: ", Q)
 
         self.step += 1
         return action

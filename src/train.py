@@ -7,9 +7,7 @@ from tqdm import tqdm
 from env_hiv import HIVPatient
 from model import DQN, AlwaysPrescribe, ProjectAgent
 
-env = TimeLimit(
-    env=HIVPatient(domain_randomization=True), max_episode_steps=200
-)  # The time wrapper limits the number of steps in an episode at 200.
+# The time wrapper limits the number of steps in an episode at 200.
 # Now is the floor is yours to implement the agent and train it.
 
 # You have to implement your own agent.
@@ -25,6 +23,12 @@ if __name__ == "__main__":
     #        for _ in range(4)
     #    ]
     # )
+    env_fixed = TimeLimit(
+        env=HIVPatient(domain_randomization=False), max_episode_steps=200
+    )
+    env_rand = TimeLimit(
+        env=HIVPatient(domain_randomization=True), max_episode_steps=200
+    )
     agent = DQN()
     tot_step = 0
     nb_episode = 400
@@ -32,6 +36,10 @@ if __name__ == "__main__":
     tot_loss = []
     pbar = tqdm(range(nb_episode))
     for step in pbar:
+        if np.random.rand() < 0.5:
+            env = env_fixed
+        else:
+            env = env_rand
         obs, info = env.reset()
         done = False
         truncated = False
@@ -54,7 +62,7 @@ if __name__ == "__main__":
             f"Episode {step} done, reward: {np.format_float_scientific(reward_episode , precision=3)}, max reward: {np.format_float_scientific(max(all_rewards) , precision=3)}, loss: {np.format_float_scientific(loss, precision=3)}, epsilon: {np.format_float_scientific(agent.epsilon, precision=3)}"
         )
         tot_rewards.append(reward_episode)
-    agent.save("./model.pt")
+        agent.save(f"./models/model{step}.pt")
 
     print("tot_step: ", tot_step)
     print("tot_rewards: ", tot_rewards)
